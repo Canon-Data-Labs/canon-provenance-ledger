@@ -45,6 +45,9 @@ export default function App() {
           required
           style={{ padding: 8, fontSize: 14 }}
         />
+        <p style={{ margin: 0, fontSize: 12, color: '#b45309', background: '#fef3c7', padding: '6px 10px', borderRadius: 4 }}>
+          ⚠️ Only use this on a trusted, HTTPS-secured connection. Never enter your secret key on an untrusted site.
+        </p>
         <button type="submit" disabled={loading} style={{ padding: '10px 20px', cursor: 'pointer' }}>
           {loading ? 'Registering…' : 'Register on Canon'}
         </button>

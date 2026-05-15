@@ -1,7 +1,6 @@
 #![no_std]
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Bytes, Env, Symbol, symbol_short};
 
-/// A provenance record anchoring a data hash to its creator.
 #[contracttype]
 #[derive(Clone)]
 pub struct ProvenanceRecord {
@@ -11,7 +10,8 @@ pub struct ProvenanceRecord {
     pub verified: bool,
 }
 
-const RECORDS: Symbol = symbol_short!("RECORDS");
+// Separate keys: COUNT for the counter, REC prefix for records
+const COUNT: Symbol = symbol_short!("COUNT");
 
 #[contract]
 pub struct ProvenanceRegistry;
@@ -22,7 +22,7 @@ impl ProvenanceRegistry {
     pub fn register(env: Env, creator: Address, data_hash: Bytes) -> u64 {
         creator.require_auth();
 
-        let id: u64 = env.storage().instance().get(&RECORDS).unwrap_or(0) + 1;
+        let id: u64 = env.storage().instance().get(&COUNT).unwrap_or(0) + 1;
 
         let record = ProvenanceRecord {
             creator,
@@ -32,15 +32,17 @@ impl ProvenanceRegistry {
         };
 
         env.storage().persistent().set(&id, &record);
-        env.storage().instance().set(&RECORDS, &id);
+        env.storage().instance().set(&COUNT, &id);
         id
     }
 
-    /// Verify a record (admin only — caller must be the original creator for now).
+    /// Verify a record — only the original creator may verify.
     pub fn verify(env: Env, id: u64, caller: Address) {
         caller.require_auth();
         let mut record: ProvenanceRecord = env.storage().persistent().get(&id).expect("not found");
-        assert!(record.creator == caller, "unauthorized");
+        if record.creator != caller {
+            panic!("unauthorized");
+        }
         record.verified = true;
         env.storage().persistent().set(&id, &record);
     }
@@ -52,20 +54,20 @@ impl ProvenanceRegistry {
 
     /// Total records registered.
     pub fn count(env: Env) -> u64 {
-        env.storage().instance().get(&RECORDS).unwrap_or(0)
+        env.storage().instance().get(&COUNT).unwrap_or(0)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::{testutils::{Address as _, Ledger}, Bytes, Env};
+    use soroban_sdk::{testutils::Address as _, Bytes, Env};
 
     #[test]
     fn test_register_and_get() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, ProvenanceRegistry);
+        let contract_id = env.register(ProvenanceRegistry, ());
         let client = ProvenanceRegistryClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
@@ -84,7 +86,7 @@ mod test {
     fn test_verify() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, ProvenanceRegistry);
+        let contract_id = env.register(ProvenanceRegistry, ());
         let client = ProvenanceRegistryClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);

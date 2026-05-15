@@ -1,9 +1,18 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 
-const { Horizon, Keypair, TransactionBuilder, Networks, Operation, Asset, BASE_FEE } = StellarSdk;
+const { Horizon, Keypair, TransactionBuilder, Networks, Operation, BASE_FEE } = StellarSdk;
 
 const server = new Horizon.Server(process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org');
 const networkPassphrase = process.env.STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+
+export function validateSecretKey(secretKey) {
+  try {
+    Keypair.fromSecret(secretKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function getAccountInfo(publicKey) {
   return server.loadAccount(publicKey);
@@ -20,7 +29,8 @@ export async function submitDataHashTx(secretKey, dataHash) {
     .addOperation(
       Operation.manageData({
         name: 'canon:hash',
-        value: dataHash.slice(0, 64), // Stellar manageData value max 64 bytes
+        // manageData value must be a Buffer (up to 64 bytes); hex SHA-256 is exactly 64 ASCII bytes
+        value: Buffer.from(dataHash),
       })
     )
     .setTimeout(30)
