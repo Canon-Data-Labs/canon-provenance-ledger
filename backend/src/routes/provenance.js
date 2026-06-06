@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createHash } from 'crypto';
-import { submitDataHashTx, getAccountInfo, validateSecretKey } from '../services/stellar.js';
+import { submitDataHashTx, getAccountInfo, validateSecretKey, getAccountHistory } from '../services/stellar.js';
 
 const router = Router();
 
@@ -35,6 +35,18 @@ router.get('/account/:publicKey', async (req, res) => {
     res.json({ id: account.id, sequence: account.sequence, balances: account.balances });
   } catch {
     res.status(404).json({ error: 'Account not found' });
+  }
+});
+// GET /api/provenance/history/:publicKey
+router.get('/history/:publicKey', async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const offset = parseInt(req.query.offset, 10) || 0;
+
+  try {
+    const history = await getAccountHistory(req.params.publicKey, limit, offset);
+    res.json({ data: history, limit, offset });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
 

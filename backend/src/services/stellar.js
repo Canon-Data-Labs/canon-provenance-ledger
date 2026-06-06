@@ -39,3 +39,21 @@ export async function submitDataHashTx(secretKey, dataHash) {
   tx.sign(keypair);
   return server.submitTransaction(tx);
 }
+
+export async function getAccountHistory(publicKey, limit = 10, offset = 0) {
+  // Horizon max limit is 200. We fetch limit + offset and slice to emulate offset.
+  const fetchLimit = Math.min(limit + offset, 200);
+  
+  const response = await server.transactions()
+    .forAccount(publicKey)
+    .order('desc')
+    .limit(fetchLimit)
+    .call();
+    
+  return response.records.slice(offset, offset + limit).map(tx => ({
+    id: tx.id,
+    hash: tx.hash,
+    created_at: tx.created_at,
+    ledger: tx.ledger
+  }));
+}
