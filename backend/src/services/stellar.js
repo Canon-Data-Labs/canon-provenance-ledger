@@ -57,3 +57,14 @@ export async function getAccountHistory(publicKey, limit = 10, offset = 0) {
     ledger: tx.ledger
   }));
 }
+
+export async function getTransaction(txHash) {
+  const tx = await server.transactions().transaction(txHash).call();
+  return {
+    id: tx.id,
+    hash: tx.hash,
+    created_at: tx.created_at,
+    ledger: tx.ledger,
+    source_account: tx.source_account
+  };
+}

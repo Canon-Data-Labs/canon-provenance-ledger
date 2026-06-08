@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createHash } from 'crypto';
-import { submitDataHashTx, getAccountInfo, validateSecretKey, getAccountHistory } from '../services/stellar.js';
+import { submitDataHashTx, getAccountInfo, validateSecretKey, getAccountHistory, getTransaction } from '../services/stellar.js';
 
 const router = Router();
 
@@ -47,6 +47,20 @@ router.get('/history/:publicKey', async (req, res) => {
     res.json({ data: history, limit, offset });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// GET /api/provenance/record/:txHash
+router.get('/record/:txHash', async (req, res) => {
+  try {
+    const record = await getTransaction(req.params.txHash);
+    res.json(record);
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      res.status(404).json({ error: 'Record not found' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch record' });
+    }
   }
 });
 
